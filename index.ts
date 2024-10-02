@@ -30,6 +30,7 @@ const io = new Server(3000, {
   }
 });
 
+
 type Player = {
   id: string;
   x: number;
@@ -73,6 +74,15 @@ createConnection({
         socket.emit('Registered');
       } else {
         socket.emit('RegistrationFailed');
+      }
+    });
+
+    socket.on('Logout', async (id: string) => {
+      let player = players.find(p => p.id === id);
+      if (player) {
+        players = players.filter(p => p.id !== id);
+        savePlayer(player);
+        socket.broadcast.emit('OtherPlayerDisconnected', player.id);
       }
     });
 
