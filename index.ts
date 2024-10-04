@@ -30,7 +30,7 @@ const io = new Server(3000, {
   }
 });
 
-const UPDATE_RATE = 60; // 20 updates per second
+const UPDATE_RATE = 16; // 20 updates per second
 const MAX_MOVE_DISTANCE = 1000; // Maximum distance a player can move in one update
 
 type Player = {
