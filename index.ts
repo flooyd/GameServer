@@ -30,6 +30,8 @@ const io = new Server(3000, {
   }
 });
 
+const UPDATE_RATE = 60; // 20 updates per second
+const MAX_MOVE_DISTANCE = 1000; // Maximum distance a player can move in one update
 
 type Player = {
   id: string;
@@ -39,6 +41,10 @@ type Player = {
   height: number;
   name: string;
 }
+
+type PlayerWithBuffer = Player & {
+  buffer: { x: number; y: number; timestamp: number }[];
+};
 
 type Todo = {
   id: string;
@@ -50,7 +56,7 @@ type Todo = {
   y: number;
 }
 
-let players: Player[] = [];
+let players: PlayerWithBuffer[] = [];
 
 createConnection({
   type: "postgres",
@@ -91,16 +97,24 @@ createConnection({
       if (player) {
         socket.emit('LoginSuccess', player);
         socket.emit('ExistingPlayers', players);
-        players.push(player);
+
+        const playerWithBuffer: PlayerWithBuffer = {
+          ...player,
+          buffer: [],
+        };
+
+        players.push(playerWithBuffer);
         socket.broadcast.emit('OtherPlayerConnected', player);
-        socket.on('PlayerMove', player => {
-          const updatedPlayer = players.find(p => p.id === player.id.toString());
-          if (!updatedPlayer) {
-            return;
+
+        socket.on('PlayerMove', updatedPlayer => {
+          const player = players.find(p => p.id === updatedPlayer.id.toString());
+          if (player) {
+            player.buffer.push({
+              x: updatedPlayer.x,
+              y: updatedPlayer.y,
+              timestamp: Date.now(),
+            });
           }
-          updatedPlayer.x = player.x;
-          updatedPlayer.y = player.y;
-          socket.broadcast.emit('OtherPlayerMove', player);
         });
 
         socket.on('disconnect', () => {
@@ -109,7 +123,6 @@ createConnection({
           socket.broadcast.emit('OtherPlayerDisconnected', player.id);
         });
 
-        //create todo. look up the author by player id
         socket.on('CreateTodo', async (task: string, x: number, y: number, id: string) => {
           let author = players.find(p => p.id === id);
           if (author) {
@@ -185,7 +198,42 @@ createConnection({
       }
     });
   });
+
+  // Start the update loop
+  setInterval(updateAndBroadcastPlayerPositions, UPDATE_RATE);
 });
+
+function updateAndBroadcastPlayerPositions() {
+  const now = Date.now();
+  players.forEach(player => {
+    if (player.buffer.length > 0) {
+      const latestPosition = player.buffer[player.buffer.length - 1];
+      const dx = latestPosition.x - player.x;
+      const dy = latestPosition.y - player.y;
+      const distance = Math.sqrt(dx * dx + dy * dy);
+
+      if (distance <= MAX_MOVE_DISTANCE) {
+        player.x = latestPosition.x;
+        player.y = latestPosition.y;
+      } else {
+        // If the movement is too large, interpolate
+        const ratio = MAX_MOVE_DISTANCE / distance;
+        player.x += dx * ratio;
+        player.y += dy * ratio;
+      }
+
+      // Clear old buffer entries
+      player.buffer = player.buffer.filter(entry => now - entry.timestamp < 1000);
+
+      // Broadcast the smoothed position
+      io.emit('OtherPlayerMove', {
+        id: player.id,
+        x: player.x,
+        y: player.y,
+      });
+    }
+  });
+}
 
 const savePlayer = async (player: Player) => {
   await getRepository(PlayerEntity).save(player);
