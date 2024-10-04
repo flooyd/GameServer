@@ -30,8 +30,7 @@ const io = new Server(3000, {
   }
 });
 
-const UPDATE_RATE = 16; // rate per second (60fps)
-const MAX_MOVE_DISTANCE = 1000; // Maximum distance a player can move in one update
+const UPDATE_RATE = 1000 / 120; // rate per second (60fps)
 
 type Player = {
   id: string;
@@ -208,19 +207,9 @@ function updateAndBroadcastPlayerPositions() {
   players.forEach(player => {
     if (player.buffer.length > 0) {
       const latestPosition = player.buffer[player.buffer.length - 1];
-      const dx = latestPosition.x - player.x;
-      const dy = latestPosition.y - player.y;
-      const distance = Math.sqrt(dx * dx + dy * dy);
 
-      if (distance <= MAX_MOVE_DISTANCE) {
-        player.x = latestPosition.x;
-        player.y = latestPosition.y;
-      } else {
-        // If the movement is too large, interpolate
-        const ratio = MAX_MOVE_DISTANCE / distance;
-        player.x += dx * ratio;
-        player.y += dy * ratio;
-      }
+      player.x = latestPosition.x;
+      player.y = latestPosition.y;
 
       // Clear old buffer entries
       player.buffer = player.buffer.filter(entry => now - entry.timestamp < 1000);
