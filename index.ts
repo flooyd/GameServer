@@ -41,10 +41,6 @@ type Player = {
   name: string;
 }
 
-type PlayerWithBuffer = Player & {
-  buffer: { x: number; y: number; timestamp: number }[];
-};
-
 type Todo = {
   id: string;
   author: string;
@@ -55,7 +51,7 @@ type Todo = {
   y: number;
 }
 
-let players: PlayerWithBuffer[] = [];
+let players: any[] = [];
 
 createConnection({
   type: "postgres",
@@ -97,25 +93,15 @@ createConnection({
       if (player) {
         socket.emit('LoginSuccess', player);
         socket.emit('ExistingPlayers', players);
-
-        const playerWithBuffer: PlayerWithBuffer = {
-          ...player,
-          buffer: [],
-        };
-
-        players.push(playerWithBuffer);
+        players.push(player);
         socket.broadcast.emit('OtherPlayerConnected', player);
 
         socket.on('PlayerMove', updatedPlayer => {
           const player = players.find(p => p.id === updatedPlayer.id.toString());
           if (player) {
-            player.buffer.push({
-              x: updatedPlayer.x,
-              y: updatedPlayer.y,
-              timestamp: Date.now(),
-            });
             player.x = updatedPlayer.x;
             player.y = updatedPlayer.y;
+            socket.broadcast.emit('OtherPlayerMoved', player);
           }
         });
 
@@ -201,32 +187,7 @@ createConnection({
       }
     });
   });
-
-  // Start the update loop
-  setInterval(updateAndBroadcastPlayerPositions, UPDATE_RATE);
 });
-
-function updateAndBroadcastPlayerPositions() {
-  const now = Date.now();
-  players.forEach(player => {
-    if (player.buffer.length > 0) {
-      const latestPosition = player.buffer[player.buffer.length - 1];
-
-      player.x = latestPosition.x;
-      player.y = latestPosition.y;
-
-      // Clear old buffer entries
-      player.buffer = player.buffer.filter(entry => now - entry.timestamp < 1000);
-
-      // Broadcast the smoothed position
-      io.emit('OtherPlayerMove', {
-        id: player.id,
-        x: player.x,
-        y: player.y,
-      });
-    }
-  });
-}
 
 const savePlayer = async (player: Player) => {
   await getRepository(PlayerEntity).save(player);
