@@ -87,6 +87,7 @@ createConnection({
       if (player) {
         players = players.filter(p => p.id !== id);
         savePlayer(player);
+        console.log('Saving data for player', player);
         socket.broadcast.emit('OtherPlayerDisconnected', player.id);
       }
     });
@@ -119,6 +120,7 @@ createConnection({
         socket.on('disconnect', () => {
           players = players.filter((p) => p.id !== player.id);
           savePlayer(player);
+          console.log('Saving data for player on disconnect', player);
           socket.broadcast.emit('OtherPlayerDisconnected', player.id);
         });
 
