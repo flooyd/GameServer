@@ -85,8 +85,8 @@ createConnection({
     socket.on('Logout', async (id: string) => {
       let player = players.find(p => p.id === id);
       if (player) {
+        await savePlayer(player);
         players = players.filter(p => p.id !== id);
-        savePlayer(player);
         console.log('Saving data for player', player);
         socket.broadcast.emit('OtherPlayerDisconnected', player.id);
       }
@@ -118,8 +118,8 @@ createConnection({
         });
 
         socket.on('disconnect', () => {
+          await savePlayer(player);
           players = players.filter((p) => p.id !== player.id);
-          savePlayer(player);
           console.log('Saving data for player on disconnect', player);
           socket.broadcast.emit('OtherPlayerDisconnected', player.id);
         });
