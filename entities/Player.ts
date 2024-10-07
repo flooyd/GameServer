@@ -37,4 +37,7 @@ export class Player {
   //color string nullable
   @Column({ type: "varchar", length: 255, nullable: true })
   color: string = "#000000";
+
+  @Column({ type: "float", nullable: true })
+  speed: number = 0.5;
 }

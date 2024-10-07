@@ -30,7 +30,6 @@ const io = new Server(3000, {
   }
 });
 
-const UPDATE_RATE = 1000 / 120; // rate per second (60fps)
 
 type Player = {
   id: string;
@@ -39,6 +38,10 @@ type Player = {
   width: number;
   height: number;
   name: string;
+  area: string;
+  color: string;
+  speed: number;
+
 }
 
 type Todo = {
@@ -229,6 +232,9 @@ const playerSafeView = (player: PlayerEntity) => {
     y: player.y,
     width: player.width,
     height: player.height,
+    speed: player.speed,
+    area: player.area,
+    color: player.color,
   }
 }
 
@@ -240,5 +246,8 @@ const playerView = (player: PlayerEntity) => {
     y: player.y,
     width: player.width,
     height: player.height,
+    area: player.area,
+    color: player.color,
+    speed: player.speed,
   }
 }
